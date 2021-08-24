@@ -1,3 +1,3 @@
-__all__ = ['greetings', 'how_are_you', 'hi']
+__all__ = ['Contest']
 
 from aifactory_alpha.API import *
