@@ -1,20 +1,31 @@
-SUBMISSION_DEFAULT_URL = 'release.aifactory.solutions'
-
+SUBMISSION_DEFAULT_URL = 'http://submit.aifactory.solutions'
+AUTH_DEFAULT_URL = 'http://auth.aifactory.solutions'
 
 # Authentication method
 class AUTH_METHOD:
     USERINFO = 0
     TOKEN = 1
+    MAX_TRIAL = 3
 
 
 class DEBUGGING_PARAMETERS:
     TOKEN = "DEBUGGING_TOKEN"
+    PASSWORD = 'tnldnsqlqjs!'
 
 
 class SUBMIT_RESULT:
     FAIL_TO_SUBMIT = 0
     SUBMIT_SUCCESS = 200
 
+class LOG_TYPE:
+    SUBMISSION = 'SUBMISSION_LOG'
+    RELEASE = 'RELEASE_LOG'
+
+class AuthMethodNotAvailableError(Exception):
+    ment = "This auth method is not available for now. \n"
+    ment += "Please check the updated version of aifactory_alpha package. \n"
+    def __str__(self):
+        return self.ment
 
 class SubmitTokenNotFoundError(Exception):
     ment = "You have to either set AIF_TOKEN environment variable \n \
