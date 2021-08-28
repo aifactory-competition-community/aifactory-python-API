@@ -7,11 +7,16 @@ class AUTH_METHOD:
     TOKEN = 1
     MAX_TRIAL = 3
 
+class TASK_STATUS:
+    NO_AVAILABLE_LAP = 'NO_AVAILABLE_LAP'
+
+class TOKEN_STATUS:
+    EXPIRED = 'TOKEN_EXPIRED'
+    AVAILABLE = 'TOKEN_AVAILABLE'
 
 class DEBUGGING_PARAMETERS:
     TOKEN = "DEBUGGING_TOKEN"
     PASSWORD = 'tnldnsqlqjs!'
-
 
 class SUBMIT_RESULT:
     FAIL_TO_SUBMIT = 0
@@ -27,7 +32,7 @@ class AuthMethodNotAvailableError(Exception):
     def __str__(self):
         return self.ment
 
-class SubmitTokenNotFoundError(Exception):
+class RefreshTokenNotFoundError(Exception):
     ment = "You have to either set AIF_TOKEN environment variable \n \
                 or put your submission token as a parameter."
     def __str__(self):
