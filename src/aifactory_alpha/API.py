@@ -68,6 +68,7 @@ class AFContest:
         self.log_path = log_path
 
     def _send_submssion_(self, auth_token, submit_url=SUBMISSION_DEFAULT_URL):
+        headers = {'token': auth_token}
         params = {'token': auth_token}
         response = requests.get(submit_url+'/token', params=params)
         return response
@@ -107,6 +108,13 @@ class AFContest:
 
 
 if __name__ == "__main__":
-    c = AFContest(user_email='user0@aifactory.page', task_id='3000', debug=False)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--user_email', '-u', help='Example) myid@myemail.domain.com', default = 'user0@aifactory.page', dest='user_email')
+    parser.add_argument('--task_id', '-t', help='Example) 3000', default='3000', dest='task_id')
+    parser.add_argument('--file', '-f', nargs='+', help='Example) answer.csv', default=['./sample_data/sample_answer.csv'], dest='file')
+    parser.add_argument('--debug', '-d', type=bool, help='Example) False', default=False, dest='debug')
+    args = parser.parse_args()
+    c = AFContest(user_email=args.user_email, task_id=args.task_id, debug=args.debug)
     c.summary()
-    c.submit('./sample_data/sample_answer.csv')
+    c.submit(args.file[0])

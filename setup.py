@@ -3,7 +3,7 @@ import os
 
 setup(  name='aifactory_alpha',
 
-        version='0.0.6',
+        version='0.0.7',
 
         description='alpha version of AI Factory client api package',
 
@@ -25,7 +25,7 @@ setup(  name='aifactory_alpha',
 
         packages=find_packages('src'),
 
-        scripts=['bin/submit'],
+        scripts=['bin/aifactory-submit'],
 
         include_package_data=True,
 
