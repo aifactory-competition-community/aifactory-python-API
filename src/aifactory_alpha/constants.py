@@ -7,16 +7,17 @@ class AUTH_METHOD:
     TOKEN = 1
     MAX_TRIAL = 3
 
-class TASK_STATUS:
+class AUTH_RESPONSE:
     NO_AVAILABLE_LAP = 'NO_AVAILABLE_LAP'
-
-class TOKEN_STATUS:
-    EXPIRED = 'TOKEN_EXPIRED'
-    AVAILABLE = 'TOKEN_AVAILABLE'
+    TOKEN_NOT_VALID = 'TOKEN_NOT_VALID'
+    TOKEN_EXPIRED = 'TOKEN_EXPIRED'
+    DB_NOT_AVAILABLE = 'DB_NOT_AVAILABLE'
+    USER_NOT_EXIST = 'USER_NOT_EXIST'
+    PASSWORD_NOT_VALID = 'PASSWORD_NOT_VALID'
 
 class DEBUGGING_PARAMETERS:
     TOKEN = "DEBUGGING_TOKEN"
-    PASSWORD = 'tnldnsqlqjs!'
+    PASSWORD = 'qlqjs1'
 
 class SUBMIT_RESULT:
     FAIL_TO_SUBMIT = 0
@@ -25,6 +26,19 @@ class SUBMIT_RESULT:
 class LOG_TYPE:
     SUBMISSION = 'SUBMISSION_LOG'
     RELEASE = 'RELEASE_LOG'
+
+
+class AuthServerError(Exception):
+    ment = "The auth server has an error. \n"
+    ment += "Please ask the system administrator or try submitting later. \n"
+    def __str__(self):
+        return self.ment
+
+class TaskIDNotAvailableError(Exception):
+    ment = "This task doesn't have any available lap. \n"
+    ment += "Please check if you have a right task id. \n"
+    def __str__(self):
+        return self.ment
 
 class AuthMethodNotAvailableError(Exception):
     ment = "This auth method is not available for now. \n"

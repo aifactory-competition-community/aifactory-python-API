@@ -1,4 +1,4 @@
-__all__ = ['AFContest', 'AFCrypto']
+__all__ = ['AFContest', 'AFCrypto', 'constants']
 
 from aifactory_alpha.API import *
 from aifactory_alpha.Authentification import *

@@ -1,11 +1,12 @@
+from aifactory_alpha.constants import *
 from Cryptodome import Random
 from Cryptodome.Cipher import AES
 from random import random
 from hashlib import blake2b
-from constants import *
 import json
 import requests
 import http
+import time
 
 BLOCK_SIZE=16
 
@@ -21,7 +22,7 @@ class AFAuth():
         self.refresh_token = token
         self.password = None
         self.auth_method = auth_method
-        self.encrypt_mode = encrypt_mode
+        self.encrypt_mode = int(encrypt_mode)
         self.auth_url = auth_url
         self.debug = debug
         if auth_method==AUTH_METHOD.TOKEN:
@@ -84,22 +85,19 @@ class AFAuth():
     def _is_token_valid_(self):
         return False
 
-    def pack_user_info(self):
-        params = None
+    def pack_user_info(self, params: dict):
         hashed_password = self._require_password_()
         if self.encrypt_mode:
             hashed_password = self.crypt.encrypt_aes(hashed_password, self.user_email)
-        params = {'password': hashed_password, 'auth_method': self.auth_method,
-                  'task_id': self.task_id, 'user_email': self.user_email,
-                  'password_encrypted': self.encrypt_mode}
+        params['password'] = hashed_password
+        params['password_encrypted'] = self.encrypt_mode
         return params
 
-    def pack_refresh_token(self):
+    def pack_refresh_token(self, params: dict):
         if self.encrypt_mode:
             refresh_token = self.crypt.encrypt_aes(self.refresh_token, self.user_email)
-        params = {'refresh_token': refresh_token, 'auth_method': AUTH_METHOD.TOKEN,
-                  'task_id': self.task_id, 'user_email': self.user_email,
-                  'refresh_token_encrypted': self.encrypt_mode}
+        params['refresh_token'] = refresh_token
+        params['refresh_token_encrypted'] = self.encrypt_mode
         return params
 
     def get_token(self, num_trial=0, refresh=False):
@@ -110,34 +108,44 @@ class AFAuth():
         if len(res) != 0:
             return False
 
-        params = None
+        params = {'auth_method': self.auth_method,
+                  'task_id': self.task_id, 'user_email': self.user_email}
         if self.auth_method == AUTH_METHOD.USERINFO or self.refresh_token is None:
-            params = self.pack_user_info()
+            params = self.pack_user_info(params)
         elif self.auth_method == AUTH_METHOD.TOKEN and self.refresh_token is not None:
-            params = self.pack_refresh_token()
+            params = self.pack_refresh_token(params)
 
         response = requests.get(self.auth_url+'/token', params=params)
+        self.logger.info('Response from auth server: {}'.format(response.text))
 
-        if response.text == TOKEN_STATUS.EXPIRED:
+        if response.text in [AUTH_RESPONSE.TOKEN_EXPIRED, AUTH_RESPONSE.TOKEN_NOT_VALID]:
             self.refresh_token = None
             self.auth_method = AUTH_METHOD.USERINFO
-            self.logger.info("Refresh token expired. We need your password to issue a new one.")
+            self.logger.info("Refresh token not valid. We need your password to issue a new one.")
             return self.get_token(num_trial)
-        elif response.status_code == http.HTTPStatus.OK:
-            tokens = json.loads(response.text)
-            self.refresh_token = self.crypt.decrypt_aes(tokens['refresh_token'], self.user_email)
-            self.auth_token = self.crypt.decrypt_aes(tokens['token'], self.user_email)
-            self.auth_method = AUTH_METHOD.TOKEN
-            self.logger.info('Authentification process success.')
-            self.logger.info('Response from auth server: {}'.format(response.text))
-            return self.auth_token
-        else:
+        elif response.text == AUTH_RESPONSE.NO_AVAILABLE_LAP:
+            self.logger.error(TaskIDNotAvailableError.ment)
+            raise(TaskIDNotAvailableError)
+        elif response.text == AUTH_RESPONSE.DB_NOT_AVAILABLE:
+            self.looger.error(AuthServerError.ment)
+            raise(AuthServerError)
+        elif response.text in [AUTH_RESPONSE.USER_NOT_EXIST, AUTH_RESPONSE.PASSWORD_NOT_VALID]:
             if num_trial > AUTH_METHOD.MAX_TRIAL:
                 return False
             self.logger.info('Authentification failed. Please check your user info and try again.')
             self.logger.info(self.summary())
             self.logger.info('Please check you have the right password and email that you use to log-in the AI Factory Website.')
+            time.sleep(1)
             return self.get_token(num_trial + 1)
+        elif response.status_code == http.HTTPStatus.OK:
+            tokens = json.loads(response.text)
+            self.auth_token = self.crypt.decrypt_aes(tokens['token'], self.user_email)
+            if self.auth_method == AUTH_METHOD.USERINFO:
+                self.refresh_token = self.crypt.decrypt_aes(tokens['refresh_token'], self.user_email)
+                self.auth_method = AUTH_METHOD.TOKEN
+            self.logger.info('Authentification process success.')
+            return self.auth_token
+        return False
 
     def summary(self):
         _summary_ = ">>> User Authentification Info <<<\n"

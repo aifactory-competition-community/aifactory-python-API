@@ -1,6 +1,6 @@
 from aifactory_alpha.Authentification import AFAuth, AFCrypto
-from datetime import datetime
 from aifactory_alpha.constants import *
+from datetime import datetime
 import logging
 import os
 import requests
@@ -28,7 +28,7 @@ class AFContest:
         self.task_id = task_id
         self.set_log_dir(log_dir)
         self.debug = debug
-        self.encrypt_mode = encrypt_mode
+        self.encrypt_mode = int(encrypt_mode)
         self.submit_url = submit_url
         self.auth_url = auth_url
         self.auth_manager = AFAuth(user_email, task_id, self.logger, token=user_token, password=None,
@@ -49,9 +49,11 @@ class AFContest:
 
     def set_user_email(self, email: str):
         self.user_email = email
+        self.auth_manager.set_user_email(email)
 
     def set_task_id(self, task_id: int):
         self.task_id = task_id
+        self.auth_manager.set_task_id(task_id)
 
     def set_model_name_prefix(self, model_name_prefix: str):
         self.model_name_prefix = model_name_prefix
@@ -87,7 +89,7 @@ class AFContest:
             return status
         auth_token = self.auth_manager.get_token(refresh=True)
         if auth_token is False:
-            return _fail_(self, status, log_path)
+            return _fail_(self, status)
         self._send_submssion_(auth_token)
         status = SUBMIT_RESULT.SUBMIT_SUCCESS
         return _succeed_(self, status)
@@ -105,6 +107,6 @@ class AFContest:
 
 
 if __name__ == "__main__":
-    c = AFContest(user_email='user0@aifactory.page', task_id='3000', debug=True)
+    c = AFContest(user_email='user0@aifactory.page', task_id='3000', debug=False)
     c.summary()
     c.submit('./sample_data/sample_answer.csv')

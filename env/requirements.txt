@@ -1,2 +1,3 @@
 setuptools~=49.6.0
 pycryptodomex
+requests

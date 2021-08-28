@@ -3,7 +3,7 @@ import os
 
 setup(  name='aifactory_alpha',
 
-        version='0.0.4',
+        version='0.0.6',
 
         description='alpha version of AI Factory client api package',
 
@@ -15,11 +15,11 @@ setup(  name='aifactory_alpha',
 
         license='MIT',
 
-        py_modules=['API', 'FileUtilities', 'greetings', 'Authentification', 'constants'],
+        py_modules=['API', 'FileUtilities', 'Authentification', 'constants', 'greetings'],
 
         python_requires='>=3.0',
 
-        install_requires=['pycryptodomex'],
+        install_requires=['pycryptodomex', 'requests'],
 
         package_dir={'': "src/"},
 
