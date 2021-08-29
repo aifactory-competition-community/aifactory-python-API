@@ -32,6 +32,16 @@ while [[ $# -gt 0 ]]; do
       OPTIONS="${OPTIONS} --debug ${DEBUG}"
       shift
       ;;
+    --submit_url)
+      SUBMIT_URL="$2"
+      OPTIONS="${OPTIONS} --submit_url ${SUBMIT_URL}"
+      shift
+      ;;
+    --auth_url)
+      AUTH_URL="$2"
+      OPTIONS="${OPTIONS} --auth_url ${AUTH_URL}"
+      shift
+      ;;
   esac
   shift
 done

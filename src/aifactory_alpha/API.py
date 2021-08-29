@@ -114,7 +114,12 @@ if __name__ == "__main__":
     parser.add_argument('--task_id', '-t', help='Example) 3000', default='3000', dest='task_id')
     parser.add_argument('--file', '-f', nargs='+', help='Example) answer.csv', default=['./sample_data/sample_answer.csv'], dest='file')
     parser.add_argument('--debug', '-d', type=bool, help='Example) False', default=False, dest='debug')
+    parser.add_argument('--submit_url', help='Example) http://submit.aifactory.solutions',
+                        default=SUBMISSION_DEFAULT_URL, dest='submit_url')
+    parser.add_argument('--auth_url', help='Example) http://auth.aifactory.solutions',
+                        default=AUTH_DEFAULT_URL, dest='auth_url')
     args = parser.parse_args()
-    c = AFContest(user_email=args.user_email, task_id=args.task_id, debug=args.debug)
+    c = AFContest(user_email=args.user_email, task_id=args.task_id, debug=args.debug,
+                  submit_url=args.submit_url, auth_url=args.auth_url)
     c.summary()
     c.submit(args.file[0])

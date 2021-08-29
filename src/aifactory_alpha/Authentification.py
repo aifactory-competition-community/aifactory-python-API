@@ -123,13 +123,17 @@ class AFAuth():
             self.auth_method = AUTH_METHOD.USERINFO
             self.logger.info("Refresh token not valid. We need your password to issue a new one.")
             return self.get_token(num_trial)
-        elif response.text == AUTH_RESPONSE.NO_AVAILABLE_LAP:
+        elif response.text == AUTH_RESPONSE.USER_NOT_PARTICIPATING:  # if the user hasn't registered in the task.
+            self.logger.error(UserNotRegisteredError.ment)
+            raise(UserNotRegisteredError)
+        elif response.text == AUTH_RESPONSE.NO_AVAILABLE_LAP:  # if there isn't any lap to submit the result.
             self.logger.error(TaskIDNotAvailableError.ment)
             raise(TaskIDNotAvailableError)
-        elif response.text == AUTH_RESPONSE.DB_NOT_AVAILABLE:
-            self.looger.error(AuthServerError.ment)
+        elif response.text == AUTH_RESPONSE.DB_NOT_AVAILABLE:  # if the system has a problem.
+            self.logger.error(AuthServerError.ment)
             raise(AuthServerError)
         elif response.text in [AUTH_RESPONSE.USER_NOT_EXIST, AUTH_RESPONSE.PASSWORD_NOT_VALID]:
+            # if the user information was wrong
             if num_trial > AUTH_METHOD.MAX_TRIAL:
                 return False
             self.logger.info('Authentification failed. Please check your user info and try again.')

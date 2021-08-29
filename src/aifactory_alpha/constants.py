@@ -13,6 +13,7 @@ class AUTH_RESPONSE:
     TOKEN_EXPIRED = 'TOKEN_EXPIRED'
     DB_NOT_AVAILABLE = 'DB_NOT_AVAILABLE'
     USER_NOT_EXIST = 'USER_NOT_EXIST'
+    USER_NOT_PARTICIPATING = 'USER_NOT_PARTICIPATING'
     PASSWORD_NOT_VALID = 'PASSWORD_NOT_VALID'
 
 class DEBUGGING_PARAMETERS:
@@ -37,6 +38,12 @@ class AuthServerError(Exception):
 class TaskIDNotAvailableError(Exception):
     ment = "This task doesn't have any available lap. \n"
     ment += "Please check if you have a right task id. \n"
+    def __str__(self):
+        return self.ment
+
+class UserNotRegisteredError(Exception):
+    ment = "This user hasn't registered in this task. \n"
+    ment += "Please check if you have registered in this task on our website. \n"
     def __str__(self):
         return self.ment
 
