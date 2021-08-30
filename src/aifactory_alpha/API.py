@@ -1,7 +1,6 @@
 from aifactory_alpha.Authentification import AFAuth, AFCrypto
 from aifactory_alpha.constants import *
 from datetime import datetime
-from requests_toolbelt.multipart.encoder import MultipartEncoder
 import logging
 import os
 import requests
@@ -98,7 +97,8 @@ class AFContest:
         elif response.status_code == http.HTTPStatus.OK:
             response_params = json.loads(response.text)
             self.logger.info("Submission completed. Please check the leader-board for scoring result.")
-            self.logger.info("Your scoring .")
+            self.logger.info("You have been submitted for {} times.".format(response_params['submit_number']))
+            self.logger.info("The model name was recorded as {}.".format(response_params['model_name']))
         return response
 
     def submit(self, file_path):
@@ -149,8 +149,8 @@ if __name__ == "__main__":
                         default="./log", dest='log_dir')
     args = parser.parse_args()
     if args.debug:
-        user_email = 'user0@aifactory.space' if args.user_email is not None else args.user_email
-        task_id = '3000' if args.task_id is not None else args.task_id
+        user_email = 'user0@aifactory.space' if args.user_email is None else args.user_email
+        task_id = '3000' if args.task_id is None else args.task_id
         files = ['./sample_data/sample_answer.csv'] if args.file is not None else args.file
         c = AFContest(user_email=user_email, task_id=task_id, debug=args.debug,
                       submit_url=args.submit_url, auth_url=args.auth_url, log_dir=args.log_dir)
