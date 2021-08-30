@@ -3,7 +3,7 @@ import os
 
 setup(  name='aifactory_alpha',
 
-        version='0.1.0',
+        version='0.1.1',
 
         description='alpha version of AI Factory client api package',
 
