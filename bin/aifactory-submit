@@ -42,6 +42,11 @@ while [[ $# -gt 0 ]]; do
       OPTIONS="${OPTIONS} --auth_url ${AUTH_URL}"
       shift
       ;;
+    --log_dir)
+      LOG_DIR="$2"
+      OPTIONS="${OPTIONS} --log_dir ${LOG_DIR}"
+      shift
+      ;;
   esac
   shift
 done

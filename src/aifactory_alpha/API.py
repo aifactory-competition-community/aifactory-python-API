@@ -74,9 +74,8 @@ class AFContest:
         response = None
         with open(file_path, 'rb') as f:
             response = requests.post(submit_url+'/submit', files={'file': f}, headers=headers)
-
-        self.logger.info('Response from auth server: {}'.format(response.text))
-
+        if self.debug:
+            self.logger.info('Response from auth server: {}'.format(response.text))
         if response.text in [AUTH_RESPONSE.TOKEN_EXPIRED, AUTH_RESPONSE.TOKEN_NOT_VALID]:
             self.logger.info("Token not valid. Starting authentification again.")
             auth_token = self.auth_manager.get_token(refresh=True)
@@ -85,7 +84,9 @@ class AFContest:
             self.logger.error(SubmitServerError.ment)
             raise(SubmitServerError)
         elif response.status_code == http.HTTPStatus.OK:
-            pass
+            response_params = json.loads(response.text)
+            self.logger.info("Submission completed. Please check the leader-board for scoring result.")
+            self.logger.info("Your scoring .")
         return response
 
     def _is_file_valid_(self, file_path):
@@ -136,18 +137,28 @@ class AFContest:
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--user_email', '-u', help='Example) myid@myemail.domain.com', default = 'user0@aifactory.page', dest='user_email')
-    parser.add_argument('--task_id', '-t', help='Example) 3000', default='3000', dest='task_id')
-    parser.add_argument('--file', '-f', nargs='+', help='Example) answer.csv', default=['./sample_data/sample_answer.csv'], dest='file')
+    parser.add_argument('--user_email', '-u', help='Example) myid@myemail.domain.com', dest='user_email')
+    parser.add_argument('--task_id', '-t', help='Example) 3000', dest='task_id')
+    parser.add_argument('--file', '-f', nargs='+', help='Example) answer.csv', dest='file')
     parser.add_argument('--debug', '-d', type=bool, help='Example) False', default=False, dest='debug')
     parser.add_argument('--submit_url', help='Example) http://submit.aifactory.solutions',
                         default=SUBMISSION_DEFAULT_URL, dest='submit_url')
     parser.add_argument('--auth_url', help='Example) http://auth.aifactory.solutions',
                         default=AUTH_DEFAULT_URL, dest='auth_url')
+    parser.add_argument('--log_dir', help='Example) http://auth.aifactory.solutions',
+                        default="./log", dest='log_dir')
     args = parser.parse_args()
-    c = AFContest(user_email=args.user_email, task_id=args.task_id, debug=args.debug,
-                  submit_url=args.submit_url, auth_url=args.auth_url)
-    c.summary()
-    # c.submit(args.file[0])
-    c.submit('./sample_data/sample_answer.zip')
+    if args.debug:
+        user_email = 'user0@aifactory.space' if args.user_email is not None else args.user_email
+        task_id = '3000' if args.task_id is not None else args.task_id
+        files = ['./sample_data/sample_answer.csv'] if args.file is not None else args.file
+        c = AFContest(user_email=user_email, task_id=task_id, debug=args.debug,
+                      submit_url=args.submit_url, auth_url=args.auth_url, log_dir=args.log_dir)
+        c.summary()
+        c.submit(files[0])
+    else:
+        c = AFContest(user_email=args.user_email, task_id=args.task_id, debug=args.debug,
+                      submit_url=args.submit_url, auth_url=args.auth_url, log_dir=args.log_dir)
+        c.summary()
+        c.submit(args.file[0])
 
