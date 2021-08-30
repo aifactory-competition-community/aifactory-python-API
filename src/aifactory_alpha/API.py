@@ -1,6 +1,7 @@
 from aifactory_alpha.Authentification import AFAuth, AFCrypto
 from aifactory_alpha.constants import *
 from datetime import datetime
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 import logging
 import os
 import requests
@@ -67,13 +68,39 @@ class AFContest:
         self.logger.addHandler(file_handler)
         self.log_path = log_path
 
-    def _send_submssion_(self, auth_token, submit_url=SUBMISSION_DEFAULT_URL):
-        headers = {'token': auth_token}
-        params = {'token': auth_token}
-        response = requests.get(submit_url+'/token', params=params)
+    def _send_file_(self, auth_token, file_path, submit_url=SUBMISSION_DEFAULT_URL, num_trial=0):
+        headers = {'token': auth_token,
+                   'file-type': file_path.split('.')[-1]}
+        response = None
+        with open(file_path, 'rb') as f:
+            response = requests.post(submit_url+'/submit', files={'file': f}, headers=headers)
+
+        self.logger.info('Response from auth server: {}'.format(response.text))
+
+        if response.text in [AUTH_RESPONSE.TOKEN_EXPIRED, AUTH_RESPONSE.TOKEN_NOT_VALID]:
+            self.logger.info("Token not valid. Starting authentification again.")
+            auth_token = self.auth_manager.get_token(refresh=True)
+            return self._send_file_(auth_token, file_path, submit_url, num_trial+1)
+        elif response.text == SUBMIT_RESPONSE.DB_NOT_AVAILABLE:  # if the system has a problem.
+            self.logger.error(SubmitServerError.ment)
+            raise(SubmitServerError)
+        elif response.status_code == http.HTTPStatus.OK:
+            pass
         return response
 
-    def submit(self, file):
+    def _is_file_valid_(self, file_path):
+        if not os.path.exists(file_path):
+            self.logger.error("File {} not found.".format(file_path))
+            return False
+        elif os.path.getsize(file_path) > FILE_STATUS.MAX_FILE_SIZE:
+            self.logger.error(FileTooLargeError.ment)
+            return False
+        elif file_path.split('.')[-1] not in FILE_TYPE.available_file_extensions:
+            self.logger.error(FileTypeNotAvailable.ment)
+            return False
+        return True
+
+    def submit(self, file_path):
         # This method submit the answer file to the server.
         def _fail_(self, _status_):
             self.logger.error("Submission Failed.")
@@ -85,13 +112,12 @@ class AFContest:
             return _status_
         self.reset_logger(LOG_TYPE.SUBMISSION)
         status = SUBMIT_RESULT.FAIL_TO_SUBMIT
-        if not os.path.exists(file):
-            self.logger.error("File {} not found.".format(file))
-            return status
+        if not self._is_file_valid_(file_path):
+            return _fail_(self, status)
         auth_token = self.auth_manager.get_token(refresh=True)
         if auth_token is False:
             return _fail_(self, status)
-        self._send_submssion_(auth_token)
+        response = self._send_file_(auth_token, file_path)
         status = SUBMIT_RESULT.SUBMIT_SUCCESS
         return _succeed_(self, status)
 
@@ -122,4 +148,6 @@ if __name__ == "__main__":
     c = AFContest(user_email=args.user_email, task_id=args.task_id, debug=args.debug,
                   submit_url=args.submit_url, auth_url=args.auth_url)
     c.summary()
-    c.submit(args.file[0])
+    # c.submit(args.file[0])
+    c.submit('./sample_data/sample_answer.zip')
+
