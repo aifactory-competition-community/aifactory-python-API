@@ -68,27 +68,6 @@ class AFContest:
         self.logger.addHandler(file_handler)
         self.log_path = log_path
 
-    def _send_file_(self, auth_token, file_path, submit_url=SUBMISSION_DEFAULT_URL, num_trial=0):
-        headers = {'token': auth_token,
-                   'file-type': file_path.split('.')[-1]}
-        response = None
-        with open(file_path, 'rb') as f:
-            response = requests.post(submit_url+'/submit', files={'file': f}, headers=headers)
-        if self.debug:
-            self.logger.info('Response from auth server: {}'.format(response.text))
-        if response.text in [AUTH_RESPONSE.TOKEN_EXPIRED, AUTH_RESPONSE.TOKEN_NOT_VALID]:
-            self.logger.info("Token not valid. Starting authentification again.")
-            auth_token = self.auth_manager.get_token(refresh=True)
-            return self._send_file_(auth_token, file_path, submit_url, num_trial+1)
-        elif response.text == SUBMIT_RESPONSE.DB_NOT_AVAILABLE:  # if the system has a problem.
-            self.logger.error(SubmitServerError.ment)
-            raise(SubmitServerError)
-        elif response.status_code == http.HTTPStatus.OK:
-            response_params = json.loads(response.text)
-            self.logger.info("Submission completed. Please check the leader-board for scoring result.")
-            self.logger.info("Your scoring .")
-        return response
-
     def _is_file_valid_(self, file_path):
         if not os.path.exists(file_path):
             self.logger.error("File {} not found.".format(file_path))
@@ -100,6 +79,27 @@ class AFContest:
             self.logger.error(FileTypeNotAvailable.ment)
             return False
         return True
+
+    def _send_file_(self, auth_token, file_path, submit_url=SUBMISSION_DEFAULT_URL, num_trial=0):
+        headers = {'token': auth_token,
+                   'file-type': file_path.split('.')[-1]}
+        response = None
+        with open(file_path, 'rb') as f:
+            response = requests.post(submit_url+'/submit', files={'file': f}, headers=headers)
+        if self.debug:
+            self.logger.info('Response from auth server: {}'.format(response.text))
+        if response.text == SUBMIT_RESPONSE.TOKEN_NOT_VALID:
+            self.logger.info("Token not valid. Starting authentification again.")
+            auth_token = self.auth_manager.get_token(refresh=True)
+            return self._send_file_(auth_token, file_path, submit_url, num_trial+1)
+        elif response.text == SUBMIT_RESPONSE.DB_NOT_AVAILABLE:  # if the system has a problem.
+            self.logger.error(SubmitServerError.ment)
+            raise(SubmitServerError)
+        elif response.status_code == http.HTTPStatus.OK:
+            response_params = json.loads(response.text)
+            self.logger.info("Submission completed. Please check the leader-board for scoring result.")
+            self.logger.info("Your scoring .")
+        return response
 
     def submit(self, file_path):
         # This method submit the answer file to the server.
