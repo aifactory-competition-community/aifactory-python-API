@@ -25,3 +25,4 @@ aifactory-submit --file ./sample_data/sample_answer.csv
 
 ## To-do
  - [ ] 언노운 에러 -> 패키지 업데이트하라고 알려주기
+ - [ ] 윈도우에서도 되는지 확인해보기
