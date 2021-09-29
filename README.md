@@ -22,3 +22,8 @@ aifactory-submit --file ./sample_data/sample_answer.csv
                  --debug True # debug mode has default dummy user information
                               # You can still change argument on debug mode to make an error
 ```
+
+## To-do
+ - [ ] 언노운 에러 -> 패키지 업데이트하라고 알려주기
+ - [ ] 윈도우에서도 되는지 확인해보기
+ - [ ] 다른 플랫폼에서도 constants 공유할 수 있게 하기
