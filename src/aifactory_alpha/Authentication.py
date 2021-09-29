@@ -79,7 +79,7 @@ class AFAuth():
         else:
             password = input("Please put your password: ")
         password = self.crypt.encrypt_hash(password)
-        for _ in range(NUM_KEY_STRETCHING):
+        for _ in range(AUTH_METHOD.NUM_KEY_STRETCHING):
             password = self.crypt.encrypt_hash(password)
         return password
 
@@ -137,13 +137,13 @@ class AFAuth():
             # if the user information was wrong
             if num_trial > AUTH_METHOD.MAX_TRIAL:
                 return False
-            self.logger.info('Authentification failed. Please check your user info and try again.')
+            self.logger.info('Authentication failed. Please check your user info and try again.')
             self.logger.info(self.summary())
             self.logger.info('Please check you have the right password and email that you use to log-in the AI Factory Website.')
             time.sleep(1)
             return self.get_token(num_trial + 1)
         elif response.text == AUTH_RESPONSE.VERSION_NOT_VALID:
-            self.logger.info("Authentification failed. \nPlease check if you have the right version.")
+            self.logger.info("Authentication failed. \nPlease check if you have the right version.")
             self.logger.info("Try installing the updated version of aifactory-alpha.")
         elif response.status_code == http.HTTPStatus.OK:
             tokens = json.loads(response.text)
@@ -151,13 +151,13 @@ class AFAuth():
             if self.auth_method == AUTH_METHOD.USERINFO:
                 self.refresh_token = self.crypt.decrypt_aes(tokens['refresh_token'], self.user_email)
                 self.auth_method = AUTH_METHOD.TOKEN
-            self.logger.info('Authentification process success.')
+            self.logger.info('Authentication successful.')
             return self.auth_token
         return False
 
     def summary(self):
-        _summary_ = ">>> User Authentification Info <<<\n"
-        _summary_ += "Authentification Method:"
+        _summary_ = ">>> User Authentication Info <<<\n"
+        _summary_ += "Authentication Method:"
         if self.auth_method is AUTH_METHOD.TOKEN:
             _summary_ += "Token \n"
             _summary_ += "    Token: {} \n".format(self.refresh_token)

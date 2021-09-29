@@ -1,6 +1,6 @@
 SUBMISSION_DEFAULT_URL = 'http://submit.aifactory.solutions'
 AUTH_DEFAULT_URL = 'http://auth.aifactory.solutions'
-VERSION = '0.2.1'
+VERSION = '0.2.2'
 
 # Authentication method
 class AUTH_METHOD:

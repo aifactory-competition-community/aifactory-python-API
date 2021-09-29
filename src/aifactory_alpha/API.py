@@ -1,4 +1,4 @@
-from aifactory_alpha.Authentification import AFAuth, AFCrypto
+from aifactory_alpha.Authentication import AFAuth, AFCrypto
 from aifactory_alpha.constants import *
 from datetime import datetime
 import logging
@@ -88,7 +88,7 @@ class AFContest:
         if self.debug:
             self.logger.info('Response from auth server: {}'.format(response.text))
         if response.text == SUBMIT_RESPONSE.TOKEN_NOT_VALID:
-            self.logger.info("Token not valid. Starting authentification again.")
+            self.logger.info("Token not valid. Starting authentication again.")
             auth_token = self.auth_manager.get_token(refresh=True)
             return self._send_file_(auth_token, file_path, submit_url, num_trial+1)
         elif response.text == SUBMIT_RESPONSE.DB_NOT_AVAILABLE:  # if the system has a problem.
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     parser.add_argument('--user_email', '-u', help='Example) myid@myemail.domain.com', dest='user_email')
     parser.add_argument('--task_id', '-t', help='Example) 3000', dest='task_id')
     parser.add_argument('--file', '-f', nargs='+', help='Example) answer.csv', dest='file')
-    parser.add_argument('--debug', '-d', type=bool, help='Example) False', default=True, dest='debug')
+    parser.add_argument('--debug', '-d', type=bool, help='Example) False', default=False, dest='debug')
     parser.add_argument('--submit_url', help='Example) http://submit.aifactory.solutions',
                         default=SUBMISSION_DEFAULT_URL, dest='submit_url')
     parser.add_argument('--auth_url', help='Example) http://auth.aifactory.solutions',
