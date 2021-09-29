@@ -1,9 +1,10 @@
 from setuptools import setup, find_packages
+from src.aifactory_alpha.constants import VERSION
 import os
 
 setup(  name='aifactory_alpha',
 
-        version='0.2.0',
+        version=VERSION,
 
         description='alpha version of AI Factory client api package',
 

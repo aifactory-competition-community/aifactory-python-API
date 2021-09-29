@@ -20,7 +20,6 @@ class AFAuth():
         self.task_id = task_id
         self.logger = logger
         self.refresh_token = token
-        self.password = None
         self.auth_method = auth_method
         self.encrypt_mode = int(encrypt_mode)
         self.auth_url = auth_url
@@ -74,13 +73,15 @@ class AFAuth():
         return res
 
     def _require_password_(self):
-        self.password = None
+        password = None
         if self.debug:
-            self.password = DEBUGGING_PARAMETERS.PASSWORD
+            password = DEBUGGING_PARAMETERS.PASSWORD
         else:
-            self.password = input("Please put your password: ")
-        self.hashed_password = self.crypt.encrypt_hash(self.password)
-        return self.hashed_password
+            password = input("Please put your password: ")
+        password = self.crypt.encrypt_hash(password)
+        for _ in range(NUM_KEY_STRETCHING):
+            password = self.crypt.encrypt_hash(password)
+        return password
 
     def _is_token_valid_(self):
         return False
@@ -108,14 +109,14 @@ class AFAuth():
         if len(res) != 0:
             return False
 
-        params = {'auth_method': self.auth_method,
+        params = {'auth_method': self.auth_method, 'version': VERSION,
                   'task_id': self.task_id, 'user_email': self.user_email}
         if self.auth_method == AUTH_METHOD.USERINFO or self.refresh_token is None:
             params = self.pack_user_info(params)
         elif self.auth_method == AUTH_METHOD.TOKEN and self.refresh_token is not None:
             params = self.pack_refresh_token(params)
 
-        response = requests.get(self.auth_url+'/token', params=params)
+        response = requests.get(self.auth_url+'/submit_token', params=params)
         self.logger.info('Response from auth server: {}'.format(response.text))
 
         if response.text in [AUTH_RESPONSE.TOKEN_EXPIRED, AUTH_RESPONSE.TOKEN_NOT_VALID]:
@@ -141,6 +142,9 @@ class AFAuth():
             self.logger.info('Please check you have the right password and email that you use to log-in the AI Factory Website.')
             time.sleep(1)
             return self.get_token(num_trial + 1)
+        elif response.text == AUTH_RESPONSE.VERSION_NOT_VALID:
+            self.logger.info("Authentification failed. \nPlease check if you have the right version.")
+            self.logger.info("Try installing the updated version of aifactory-alpha.")
         elif response.status_code == http.HTTPStatus.OK:
             tokens = json.loads(response.text)
             self.auth_token = self.crypt.decrypt_aes(tokens['token'], self.user_email)
@@ -193,7 +197,15 @@ class AFCrypto():
         del crypto
         return dec
 
-    def encrypt_hash(self, data: str):
+    def zero_salting(self, data: str):
+        data += '0'*(AUTH_METHOD.SALTED_LENGTH - len(data))
+        return data
+
+    def encrypt_hash(self, data: str, zero_salting=True, salt=None):
+        if zero_salting:
+            data = self.zero_salting(data)
+        elif salt is not None:
+            data += salt
         return blake2b(data.encode()).hexdigest()
 
 

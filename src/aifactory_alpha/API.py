@@ -140,7 +140,7 @@ if __name__ == "__main__":
     parser.add_argument('--user_email', '-u', help='Example) myid@myemail.domain.com', dest='user_email')
     parser.add_argument('--task_id', '-t', help='Example) 3000', dest='task_id')
     parser.add_argument('--file', '-f', nargs='+', help='Example) answer.csv', dest='file')
-    parser.add_argument('--debug', '-d', type=bool, help='Example) False', default=False, dest='debug')
+    parser.add_argument('--debug', '-d', type=bool, help='Example) False', default=True, dest='debug')
     parser.add_argument('--submit_url', help='Example) http://submit.aifactory.solutions',
                         default=SUBMISSION_DEFAULT_URL, dest='submit_url')
     parser.add_argument('--auth_url', help='Example) http://auth.aifactory.solutions',
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     if args.debug:
         user_email = 'user0@aifactory.space' if args.user_email is None else args.user_email
         task_id = '3000' if args.task_id is None else args.task_id
-        files = ['./sample_data/sample_answer.csv'] if args.file is not None else args.file
+        files = ['./sample_data/sample_answer.csv'] if args.file is None else args.file
         c = AFContest(user_email=user_email, task_id=task_id, debug=args.debug,
                       submit_url=args.submit_url, auth_url=args.auth_url, log_dir=args.log_dir)
         c.summary()

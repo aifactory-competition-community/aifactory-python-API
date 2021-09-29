@@ -1,11 +1,14 @@
 SUBMISSION_DEFAULT_URL = 'http://submit.aifactory.solutions'
 AUTH_DEFAULT_URL = 'http://auth.aifactory.solutions'
+VERSION = '0.2.1'
 
 # Authentication method
 class AUTH_METHOD:
     USERINFO = 0
     TOKEN = 1
     MAX_TRIAL = 3
+    SALTED_LENGTH = 64
+    NUM_KEY_STRETCHING = 2
 
 class FILE_STATUS:
     _kb_ = 1024
@@ -34,6 +37,7 @@ class AUTH_RESPONSE:
     USER_NOT_EXIST = 'USER_NOT_EXIST'
     USER_NOT_PARTICIPATING = 'USER_NOT_PARTICIPATING'
     PASSWORD_NOT_VALID = 'PASSWORD_NOT_VALID'
+    VERSION_NOT_VALID = 'VERSION_NOT_VALID'
 
 class SCORING_SERVER_TYPE:
     DAEMON = 'DAEMON'
