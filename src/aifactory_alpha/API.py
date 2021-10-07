@@ -74,14 +74,17 @@ class AFContest:
         elif os.path.getsize(file_path) > FILE_STATUS.MAX_FILE_SIZE:
             self.logger.error(FileTooLargeError.ment)
             return False
-        elif file_path.split('.')[-1] not in FILE_TYPE.available_file_extensions:
+        elif ('.'.join(file_path.split('.')[-2:]) != 'tar.gz') and (file_path.split('.')[-1] not in FILE_TYPE.available_file_extensions):
             self.logger.error(FileTypeNotAvailable.ment)
             return False
         return True
 
     def _send_file_(self, auth_token, file_path, submit_url=SUBMISSION_DEFAULT_URL, num_trial=0):
+        file_type = '.'.join(file_path.split('.')[-2:])
+        if file_type != 'tar.gz':
+            file_type = file_type.split('.')[-1]
         headers = {'token': auth_token,
-                   'file-type': file_path.split('.')[-1]}
+                   'file-type': file_type}
         response = None
         with open(file_path, 'rb') as f:
             response = requests.post(submit_url+'/submit', files={'file': f}, headers=headers)
@@ -91,14 +94,21 @@ class AFContest:
             self.logger.info("Token not valid. Starting authentication again.")
             auth_token = self.auth_manager.get_token(refresh=True)
             return self._send_file_(auth_token, file_path, submit_url, num_trial+1)
-        elif response.text == SUBMIT_RESPONSE.DB_NOT_AVAILABLE:  # if the system has a problem.
-            self.logger.error(SubmitServerError.ment)
-            raise(SubmitServerError)
+        elif response.text == SUBMIT_RESPONSE.FILE_TYPE_NOT_VALID:
+            self.logger.info("This type of file is not acceptable for now.")
+            self.logger.info("Please check which type of file you have to use for this task.")
+            return False
         elif response.status_code == http.HTTPStatus.OK:
             response_params = json.loads(response.text)
             self.logger.info("Submission completed. Please check the leader-board for scoring result.")
             self.logger.info("You have been submitted for {} times.".format(response_params['submit_number']))
             self.logger.info("The model name was recorded as {}.".format(response_params['model_name']))
+        else:
+            self.logger.info("Submission failed.")
+            self.logger.info("="*10+"response from the submission server"+"="*10)
+            self.logger.info(response)
+            self.logger.info("="*10+"response from the submission server"+"="*10)
+            return False
         return response
 
     def submit(self, file_path):
@@ -119,6 +129,8 @@ class AFContest:
         if auth_token is False:
             return _fail_(self, status)
         response = self._send_file_(auth_token, file_path)
+        if response is False:
+            return _fail_(self, status)
         status = SUBMIT_RESULT.SUBMIT_SUCCESS
         return _succeed_(self, status)
 
