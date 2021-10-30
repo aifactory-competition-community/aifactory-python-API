@@ -1,9 +1,9 @@
 AIFACTORY_VERSION = '1.2.4'
-SUBMISSION_DEFAULT_URL = 'http://submit.aifactory.solutions'
+SUBMISSION_DEFAULT_URL = 'http://submit-beta.aifactory.solutions'
 SUBMIT_ENDPOINT = '/submit'
 LEADERBOARD_ENDPOINT = '/leader_board'
 SCORE_ENDPOINT = '/score'
-AUTH_DEFAULT_URL = 'http://auth-alpha.aifactory.solutions'
+AUTH_DEFAULT_URL = 'http://auth-beta.aifactory.solutions'
 AUTH_ENDPOINT = '/submit_key'
 KEYREQUEST_ENDPOINT = '/request_key'
 

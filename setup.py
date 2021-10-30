@@ -1,11 +1,11 @@
 from setuptools import setup, find_packages
 
 
-setup(  name='aifactory_alpha',
+setup(  name='aifactory_beta',
 
         version='1.2.4',
 
-        description='alpha version of AI Factory client api package',
+        description='beta version of AI Factory client api package',
 
         author='yoosunyoung',
 
