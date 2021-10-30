@@ -5,18 +5,18 @@ Alpha version of `aifactory` module
 ## Install via `pip`
 
 ```
-pip install aifactory-alpha
+pip install aifactory-alpha==0.2.2
 ```
 
-## Submit the result
+## Submit your answer for the task with the command `aifactory-submit`.
 
 ```
-aifactory-submit --user_email user0@aifactory.page 
-                 --task_id 3000 
-                 --file answer.csv
-                 # --log_dir ./log
+aifactory-submit --user_email user0@aifactory.page # password is qlqjs1 for the test user `user0`
+                 --task_id 4000 # task id can be found on the url to the task
+                 --file answer.zip # path to the file you want to submit
                  # --auth_url auth.aifactory.solutions
                  # --submit_url submit.aifactory.solutions
+                 # --log_dir ./log
                  
 aifactory-submit --file ./sample_data/sample_answer.csv 
                  --debug True # debug mode has default dummy user information
