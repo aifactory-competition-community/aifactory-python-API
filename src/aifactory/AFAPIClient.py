@@ -1,5 +1,6 @@
 from aifactory.Authentication import AFAuth, AFCrypto
 from aifactory.constants import *
+import pandas as pd
 from datetime import datetime
 import logging
 import os
@@ -7,30 +8,16 @@ import requests
 import http
 import json
 
-
-class AFAPIClient
-
-
-class AFCompetition:
+class __AFAPIClient__:
     _summary_ = None
     logger = None
-    auth_method = None
-    auth_manager = None
-    model_name_prefix = None
+    log_path = None
     encrypt_mode = None
-    def __init__(self, auth_method=AUTH_METHOD.KEY, submit_key_path=None, submit_key=None,
-                 user_email=None, task_id=None, debug=False, encrypt_mode=True,
-                 model_name_prefix=None, log_dir="./log/",
-                 submit_url=SUBMISSION_DEFAULT_URL, auth_url=AUTH_DEFAULT_URL):
-        self.set_log_dir(log_dir)
-        self.model_name_prefix = model_name_prefix
+    base_header = {AUTH_REQUEST_KEYS.AIFACTORY_VERSION: AIFACTORY_VERSION}
+
+    def __init__(self, debug=False, log_dir="./log/", encrypt_mode=True):
         self.debug = debug
         self.encrypt_mode = int(encrypt_mode)
-        self.submit_url = submit_url
-        self.auth_manager = AFAuth(self.logger, auth_method=auth_method,
-                                   submit_key_path=submit_key_path, submit_key=submit_key,
-                                   user_email=user_email, task_id=task_id, auth_url=auth_url,
-                                   encrypt_mode=encrypt_mode, debug=debug)
 
     def set_log_dir(self, log_dir: str):
         self.log_dir = os.path.abspath(log_dir)
@@ -45,6 +32,44 @@ class AFCompetition:
         stream_handler.setFormatter(formatter)
         self.logger.addHandler(stream_handler)
 
+    def __reset_logger__(self, prefix=LOG_TYPE.DEFAULT):
+        cur_log_file_name = prefix+datetime.now().__str__().replace(" ", "-").replace(":", "-").split(".")[0]+".log"
+        log_path = os.path.join(self.log_dir, cur_log_file_name)
+        file_handler = logging.FileHandler(log_path)
+        formatter = logging.Formatter('%(asctime)s:%(module)s:%(levelname)s: %(message)s', '%Y-%m-%d %H:%M:%S')
+        file_handler.setFormatter(formatter)
+        self.logger.addHandler(file_handler)
+        self.log_path = log_path
+
+    def __fail__(self, _status_=None):
+        self.logger.error("API call Failed.")
+        print("Please have a look at the logs in '{}' for more details.".format(self.log_path))
+        return _status_
+
+    def __succeed__(self, _status_=None):
+        self.logger.info("API call was successful.")
+        print("Results are recorded in the log file '{}'.".format(self.log_path))
+        return _status_
+
+
+class AFCompetition(__AFAPIClient__):
+    auth_manager = None
+    model_name_prefix = None
+    encrypt_mode = None
+    submit_url = None
+    def __init__(self, auth_method=AUTH_METHOD.KEY, submit_key_path=None, submit_key=None,
+                 user_email=None, task_id=None, debug=False, encrypt_mode=True,
+                 model_name_prefix=None, log_dir="./log/",
+                 submit_url=SUBMISSION_DEFAULT_URL, auth_url=AUTH_DEFAULT_URL):
+        super().__init__(log_dir=log_dir, encrypt_mode=encrypt_mode)
+        self.set_log_dir(log_dir)
+        self.model_name_prefix = model_name_prefix
+        self.submit_url = submit_url
+        self.auth_manager = AFAuth(self.logger, auth_method=auth_method,
+                                   submit_key_path=submit_key_path, submit_key=submit_key,
+                                   user_email=user_email, task_id=task_id, auth_url=auth_url,
+                                   encrypt_mode=encrypt_mode, debug=debug)
+
     def set_user_email(self, email: str):
         self.auth_manager.set_user_email(email)
 
@@ -53,15 +78,6 @@ class AFCompetition:
 
     def set_model_name_prefix(self, model_name_prefix: str):
         self.model_name_prefix = model_name_prefix
-
-    def reset_logger(self, prefix=LOG_TYPE.SUBMISSION):
-        cur_log_file_name = prefix+datetime.now().__str__().replace(" ", "-").replace(":", "-").split(".")[0]+".log"
-        log_path = os.path.join(self.log_dir, cur_log_file_name)
-        file_handler = logging.FileHandler(log_path)
-        formatter = logging.Formatter('%(asctime)s:%(module)s:%(levelname)s: %(message)s', '%Y-%m-%d %H:%M:%S')
-        file_handler.setFormatter(formatter)
-        self.logger.addHandler(file_handler)
-        self.log_path = log_path
 
     def _is_file_valid_(self, file_path):
         if not os.path.exists(file_path):
@@ -84,6 +100,7 @@ class AFCompetition:
         headers[AUTH_REQUEST_KEYS.KEY_ENCRYPTED_STATUS] = b'True'
         response = None
         with open(file_path, 'rb') as f:
+            headers.update(self.base_header)
             response = requests.post(submit_url+SUBMIT_ENDPOINT,
                                      files={SUBMIT_FILES_KEYS.FILE: f}, headers=headers)
         if self.debug:
@@ -120,26 +137,101 @@ class AFCompetition:
 
     def submit(self, file_path):
         # This method submit the answer file to the server.
-        def _fail_(self, _status_):
-            self.logger.error("Submission Failed.")
-            print("Please have a look at the logs in '{}' for more details.".format(self.log_path))
-            return _status_
-        def _succeed_(self, _status_):
-            self.logger.info("Submission was successful.")
-            print("Results are recorded in the log file '{}'.".format(self.log_path))
-            return _status_
-        self.reset_logger(LOG_TYPE.SUBMISSION)
-        status = SUBMIT_RESULT.FAIL_TO_SUBMIT
-        if not self._is_file_valid_(file_path):
-            return _fail_(self, status)
-        submit_key = self.auth_manager.get_submit_key()
-        if submit_key is False:
-            return _fail_(self, status)
-        response = self._send_file_(file_path)
-        if response is False:
-            return _fail_(self, status)
-        status = SUBMIT_RESULT.SUBMIT_SUCCESS
-        return _succeed_(self, status)
+        self.__reset_logger__(LOG_TYPE.SUBMISSION)
+        method_list = [self._is_file_valid_, self.auth_manager.get_submit_key, self._send_file_]
+        param_list = [[[file_path], {}], [[], {}], [[file_path], {}]]
+        status_list = [SUBMIT_RESULT.FAIL_TO_SUBMIT, SUBMIT_RESULT.FAIL_TO_SUBMIT, SUBMIT_RESULT.FAIL_TO_SUBMIT]
+        for method, params, status in zip(method_list, param_list, status_list):
+            if not method(*params[0], **params[1]):
+                return self.__fail__(status)
+        return self.__succeed__(SUBMIT_RESULT.SUBMIT_SUCCESS)
+        # if not self._is_file_valid_(file_path):
+        #     return self.__fail__(self, status)
+        # submit_key = self.auth_manager.get_submit_key()
+        # if submit_key is False:
+        #     return self.__fail__(self, status)
+        # response = self._send_file_(file_path)
+        # if response is False:
+        #     return self.__fail__(self, status)
+        # status = SUBMIT_RESULT.SUBMIT_SUCCESS
+        # return self.__succeed__(self, status)
+
+    def leader_board(self):
+        # This method print the leader board.
+        self.__reset_logger__(LOG_TYPE.LEADER_BOARD)
+        if not self.auth_manager.get_submit_key():
+            return False
+        headers = {}
+        headers = self.auth_manager.pack_submit_key(headers)
+        headers[AUTH_REQUEST_KEYS.KEY_ENCRYPTED_STATUS] = b'True'
+        response = None
+        response_params = None
+        headers.update(self.base_header)
+        response = requests.get(self.submit_url + LEADERBOARD_ENDPOINT, headers=headers)
+        if response.text == SUBMIT_RESPONSE.KEY_NOT_VALID:
+            self.logger.info("Key not valid. Please check if you have the right key.")
+            return False
+        elif response.status_code == http.HTTPStatus.OK:
+            try:
+                response_params = json.loads(response.text)
+            except:
+                self.logger.info("Couldn't call the leader board.")
+                self.logger.info("=" * 10 + "response from the submission server" + "=" * 10)
+                self.logger.info(response)
+                self.logger.info(response.text)
+                self.logger.info("=" * 10 + "response from the submission server" + "=" * 10)
+                return False
+        else:
+            self.logger.info("Submission failed.")
+            self.logger.info("=" * 10 + "response from the submission server" + "=" * 10)
+            self.logger.info(response)
+            self.logger.info("=" * 10 + "response from the submission server" + "=" * 10)
+            return False
+        from aifactory.ascii_arts.titles import LEADER_BOARD
+        print(LEADER_BOARD)
+        leader_board = pd.DataFrame(response_params, columns=LEADERBOARD_RESPONSE.KEYS)
+        leader_board.head()
+        return True
+
+    def my_score(self):
+        # This method print the leader board.
+        self.__reset_logger__(LOG_TYPE.LEADER_BOARD)
+        if not self.auth_manager.get_submit_key():
+            return False
+        headers = {}
+        headers = self.auth_manager.pack_submit_key(headers)
+        headers[AUTH_REQUEST_KEYS.KEY_ENCRYPTED_STATUS] = b'True'
+        response = None
+        response_params = None
+        headers.update(self.base_header)
+        response = requests.get(submit_url + SCORE_ENDPOINT, headers=headers)
+        if response.text == SUBMIT_RESPONSE.KEY_NOT_VALID:
+            self.logger.info("Key not valid. Please check if you have the right key.")
+            return False
+        elif response.status_code == http.HTTPStatus.OK:
+            try:
+                response_params = json.loads(response.text)
+            except:
+                self.logger.info("Couldn't call the score.")
+                self.logger.info("=" * 10 + "response from the submission server" + "=" * 10)
+                self.logger.info(response)
+                self.logger.info(response.text)
+                self.logger.info("=" * 10 + "response from the submission server" + "=" * 10)
+                return False
+        else:
+            self.logger.info("Submission failed.")
+            self.logger.info("=" * 10 + "response from the submission server" + "=" * 10)
+            self.logger.info(response)
+            self.logger.info("=" * 10 + "response from the submission server" + "=" * 10)
+            return False
+        from aifactory.ascii_arts.titles import BEST_RESULT, LATEST_RESULT
+        print(BEST_RESULT)
+        print('Best Score:  ', response_params[SCORE_RESPONSE.KEYS.BEST_SCORE])
+        print('             ', response_params[SCORE_RESPONSE.KEYS.BEST_RESULT])
+        print(LATEST_RESULT)
+        print('Latest Score: ', response_params[SCORE_RESPONSE.KEYS.LATEST_SCORE])
+        print('              ', response_params[SCORE_RESPONSE.KEYS.LATEST_RESULT])
+        return True
 
     def release(self):
         # This method submit the answer file and the code to the server.

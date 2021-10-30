@@ -1,6 +1,6 @@
-__all__ = ['AFContest', 'AFCrypto', 'constants', 'Executables']
+__all__ = ['AFCompetition', 'AFCrypto', 'constants', 'Executables']
 
-from aifactory_alpha.API import *
-from aifactory_alpha.Authentication import *
-from aifactory_alpha.constants import *
-from aifactory_alpha.Executables import *
+from aifactory.AFAPIClient import *
+from aifactory.Authentication import *
+from aifactory.constants import *
+from aifactory.Executables import *

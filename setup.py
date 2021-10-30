@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(  name='aifactory_alpha',
 
-        version='1.0.1',
+        version='1.2.4',
 
         description='alpha version of AI Factory client api package',
 
@@ -19,15 +19,16 @@ setup(  name='aifactory_alpha',
 
         python_requires='>=3.0',
 
-        install_requires=['pycryptodomex', 'requests'],
+        install_requires=['pycryptodomex', 'requests', 'pandas'],
 
         package_dir={'': "src/"},
 
         packages=find_packages('src'),
 
-        scripts=['bin/aifactory-submit', 'bin/aifactory-leader-board'],
+        scripts=['bin/aifactory-submit', 'bin/aifactory-leader-board', 'bin/aifactory-request-key'],
 
         include_package_data=True,
 
-        package_data={'submission': ['formats/training_recipe_format.json']}
+        package_data={'submission': ['formats/training_recipe_format.json'],
+                      'ascii_arts': ['ascii_arts/AI_Factory']}
 )

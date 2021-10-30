@@ -7,6 +7,9 @@ import json
 import requests
 import http
 import time
+import os
+import logging
+from datetime import datetime
 
 BLOCK_SIZE=16
 
@@ -14,11 +17,13 @@ class AFAuth():
     submit_key = None
     task_id = None
     user_id = None
-    def __init__(self, logger, user_email=None, task_id=None,
-                 submit_key=None, submit_key_path=None,
-                 password=None, auth_method=AUTH_METHOD.USERINFO, encrypt_mode=True,
+    def __init__(self, logger=None, user_email=None, task_id=None,
+                 submit_key=None, submit_key_path=None, log_dir='./log',
+                 password=None, auth_method=AUTH_METHOD.KEY, encrypt_mode=True,
                  auth_url=AUTH_DEFAULT_URL, debug=False):
         self.logger = logger
+        if self.logger is None:
+            self.set_log_dir(log_dir)
         self.auth_method = auth_method
         self.encrypt_mode = int(encrypt_mode)
         self.auth_url = auth_url
@@ -27,6 +32,28 @@ class AFAuth():
                              user_email=user_email, task_id=task_id)
         if encrypt_mode:
             self.crypt = AFCrypto()
+
+    def set_log_dir(self, log_dir: str):
+        self.log_dir = os.path.abspath(log_dir)
+        if not os.path.exists(self.log_dir):
+            os.mkdir(self.log_dir)
+        if not os.path.isdir(self.log_dir):
+            raise AssertionError("{} is not a directory.".format(self.log_dir))
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        stream_handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(module)s:%(levelname)s: %(message)s')
+        stream_handler.setFormatter(formatter)
+        self.logger.addHandler(stream_handler)
+
+    def __reset_logger__(self, prefix=LOG_TYPE.DEFAULT):
+        cur_log_file_name = prefix+datetime.now().__str__().replace(" ", "-").replace(":", "-").split(".")[0]+".log"
+        log_path = os.path.join(self.log_dir, cur_log_file_name)
+        file_handler = logging.FileHandler(log_path)
+        formatter = logging.Formatter('%(asctime)s:%(module)s:%(levelname)s: %(message)s', '%Y-%m-%d %H:%M:%S')
+        file_handler.setFormatter(formatter)
+        self.logger.addHandler(file_handler)
+        self.log_path = log_path
 
     def set_auth_method(self, auth_method, debug=False,
                         submit_key_path=None, submit_key=None,  # auth method is key
@@ -86,16 +113,14 @@ class AFAuth():
             submit_key = input("Submit Key: ")
         return submit_key
 
-    def _require_password_(self):
-        password = None
+    def _require_user_id_(self):
+        user_id = None
         if self.debug:
-            password = DEBUGGING_PARAMETERS.PASSWORD
+            user_id = DEBUGGING_PARAMETERS.USER_NAME
         else:
-            password = input("Please put your password: ")
-        password = self.crypt.encrypt_hash(password)
-        for _ in range(AUTH_METHOD.NUM_KEY_STRETCHING):
-            password = self.crypt.encrypt_hash(password)
-        return password
+            user_id = input("Please enter your user email: ")
+        user_id = self.crypt.encrypt_aes(user_id, key=AIFACTORY_VERSION)
+        return user_id
 
     def pack_user_info(self, params: dict):
         hashed_password = self._require_password_()
@@ -115,13 +140,17 @@ class AFAuth():
 
     def _check_submit_key_validity_(self):
         params = {AUTH_REQUEST_KEYS.AUTH_METHOD: self.auth_method,
-                  AUTH_REQUEST_KEYS.VERSION: AIFACTORY_VERSION}
+                  AUTH_REQUEST_KEYS.AIFACTORY_VERSION: AIFACTORY_VERSION}
         params = self.pack_submit_key(params)
         response = requests.get(self.auth_url + AUTH_ENDPOINT, params=params)
         self.logger.info('Response from auth server: {}'.format(response.text))
         if response.text == AUTH_RESPONSE.KEY_VALID:
             self.logger.info('Submit key validity checked.')
             return True
+        elif response.text == AUTH_RESPONSE.VERSION_NOT_VALID:
+            self.logger.info("Authentication failed. \nPlease check if you have the right version.")
+            self.logger.info("Try installing the updated version of aifactory-alpha.")
+            exit(1)
         elif response.status_code == http.HTTPStatus.OK:
             self.logger.warn("Authentication failed. Please check if your submit key is valid.")
             self.logger.info("제출 키가 유효하지 않습니다. 다시 한 번 확인해주세요.")
@@ -130,6 +159,25 @@ class AFAuth():
             self.logger.warn("Authentication procedure not available.")
             self.logger.warn("Skip the submit key validity check.")
         return True
+
+    def request_submit_key(self, user_id):
+        self.__reset_logger__(LOG_TYPE.KEY_REQUEST)
+        if user_id is None:
+            user_id = self._require_user_id_()
+        params = {AUTH_REQUEST_KEYS.AIFACTORY_VERSION: AIFACTORY_VERSION,
+                  AUTH_REQUEST_KEYS.USER_ID: user_id}
+
+        response = requests.get(self.auth_url+KEYREQUEST_ENDPOINT, params=params)
+        self.logger.info('Response from auth server: {}'.format(response.text))
+
+        if response.text in [AUTH_RESPONSE.USER_NOT_EXIST, AUTH_RESPONSE.USER_NOT_PARTICIPATING]:
+            self.logger.error(response.text)
+        elif response.text == AUTH_RESPONSE.KEY_REQUEST_SECCESSFUL:
+            self.logger.info("Submission Key Requested.")
+            self.logger.info("Please check your email including SPAM mail box")
+        else:
+            self.logger.error("This service is not available.")
+            self.logger.error("Please contact to AI Factory to receive your key.")
 
     def get_submit_key(self, num_trial=0, refresh=False):
         if num_trial >= MAXIMUM_SUBMISSION_TRIAL:
@@ -181,6 +229,7 @@ class AFAuth():
         elif response.text == AUTH_RESPONSE.VERSION_NOT_VALID:
             self.logger.info("Authentication failed. \nPlease check if you have the right version.")
             self.logger.info("Try installing the updated version of aifactory-alpha.")
+            exit(1)
         elif response.status_code == http.HTTPStatus.OK:
             submit_key_response = json.loads(response.text)
             self.submit_key = self.crypt.decrypt_aes(submit_key_response[AUTH_REQUEST_KEYS.SUBMIT_KEY], AIFACTORY_VERSION)

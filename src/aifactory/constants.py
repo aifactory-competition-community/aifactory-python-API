@@ -1,8 +1,11 @@
-VERSION = '1.0.0'
+AIFACTORY_VERSION = '1.2.4'
 SUBMISSION_DEFAULT_URL = 'http://submit.aifactory.solutions'
 SUBMIT_ENDPOINT = '/submit'
-AUTH_DEFAULT_URL = 'http://auth.aifactory.solutions'
+LEADERBOARD_ENDPOINT = '/leader_board'
+SCORE_ENDPOINT = '/score'
+AUTH_DEFAULT_URL = 'http://auth-alpha.aifactory.solutions'
 AUTH_ENDPOINT = '/submit_key'
+KEYREQUEST_ENDPOINT = '/request_key'
 
 class FILE_STATUS:
     _kb_ = 1024
@@ -33,7 +36,7 @@ class AUTH_METHOD:
 
 class AUTH_REQUEST_KEYS:
     AUTH_METHOD = 'auth-method'
-    VERSION = 'version'
+    AIFACTORY_VERSION = 'version'
     SUBMIT_KEY = 'submit-key'
     KEY_ENCRYPTED_STATUS = 'is-submit-key-encrypted'
     TASK_ID = 'task-id'
@@ -42,6 +45,7 @@ class AUTH_REQUEST_KEYS:
     PASSWORD_ENCRYPTED_STATUS = 'password-encrypted'
 
 class AUTH_RESPONSE:
+    SERVICE_NOT_AVAILABLE = 'SERVICE_NOT_AVAILABLE'
     NO_AVAILABLE_LAP = 'NO_AVAILABLE_LAP'
     KEY_VALID = 'KEY_VALID'
     KEY_NOT_VALID = 'KEY_NOT_VALID'
@@ -50,6 +54,7 @@ class AUTH_RESPONSE:
     USER_NOT_PARTICIPATING = 'USER_NOT_PARTICIPATING'
     PASSWORD_NOT_VALID = 'PASSWORD_NOT_VALID'
     VERSION_NOT_VALID = 'VERSION_NOT_VALID'
+    KEY_REQUEST_SECCESSFUL = 'KEY_REQUEST_SUCCESSFUL'
 
 class SCORING_SERVER_TYPE:
     DAEMON = 'DAEMON'
@@ -87,6 +92,16 @@ class SUBMIT_RESPONSE:
     FILE_TYPE_NOT_VALID = 'FILE_TYPE_NOT_VALID'
     TOO_MANY_TRIALS = 'TOO_MANY_TRIALS'
 
+class LEADERBOARD_RESPONSE:
+    KEYS = ['LAP', 'RANKING', 'NICKNAME', 'TRIAL', 'SCORE', 'TIMESTAMP']
+
+class SCORE_RESPONSE:
+    class KEYS:
+        BEST_SCORE = 'BEST_SCORE'
+        LATEST_SCORE = 'LATEST_SCORE'
+        BEST_RESULT = 'BEST_RESULT'
+        LATEST_RESULT = 'LATEST_RESULT'
+
 class DEBUGGING_PARAMETERS:
     KEY = "qkdrma-cnfrmsgoTsmsep-xhlrmsgkrhtlvek"
     USER_NAME = 'user0'
@@ -97,8 +112,11 @@ class SUBMIT_RESULT:
     SUBMIT_SUCCESS = 200
 
 class LOG_TYPE:
+    DEFAULT = 'AI_Factory_LOG'
     SUBMISSION = 'SUBMISSION_LOG'
     RELEASE = 'RELEASE_LOG'
+    KEY_REQUEST = 'KEY_REQUEST_LOG'
+    LEADER_BOARD = 'LEADER_BOARD_LOG'
 
 
 class KeyNotGivenError(Exception):
