@@ -27,3 +27,7 @@ aifactory-submit --file ./sample_data/sample_answer.csv
  - [ ] 언노운 에러 -> 패키지 업데이트하라고 알려주기
  - [ ] 윈도우에서도 되는지 확인해보기
  - [ ] 다른 플랫폼에서도 constants 공유할 수 있게 하기
+
+
+### ASCII Arts Reference
+> https://wepplication.github.io/tools/asciiArtGen/

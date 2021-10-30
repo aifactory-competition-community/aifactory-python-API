@@ -5,23 +5,15 @@ OPTIONS=''
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
-    --key-path)
+    --key_path)
       SUBMIT_KEY_PATH="$2"
-      OPTIONS="${OPTIONS} --key-path ${SUBMIT_KEY_PATH}"
+      OPTIONS="${OPTIONS} --key_path ${SUBMIT_KEY_PATH}"
       shift
       ;;
     --key)
       SUBMIT_KEY="$2"
       OPTIONS="${OPTIONS} --key ${SUBMIT_KEY}"
       shift
-      ;;
-    -f|--file)
-      FILES=''
-      while (( "$#" >= 2 )) && ! [[ $2 = -* ]]; do
-        FILES=${FILES}" $2"
-        shift
-      done
-      OPTIONS="${OPTIONS} --file ${FILES}"
       ;;
     -d|--debug)
       DEBUG="$2"
@@ -38,19 +30,8 @@ while [[ $# -gt 0 ]]; do
       OPTIONS="${OPTIONS} --submit-url ${SUBMIT_URL}"
       shift
       ;;
-    --log-dir)
-      LOG_DIR="$2"
-      OPTIONS="${OPTIONS} --log-dir ${LOG_DIR}"
-      shift
-      ;;
-    --help)
-      OPTIONS="${OPTIONS} --help"
-      ;;
-    --version)
-      python3 -m aifactory.Executables.check_version
-      ;;
   esac
   shift
 done
 
-python3 -m aifactory.Executables.submit ${OPTIONS}
+python3 -m aifactory.Executables.leader_board ${OPTIONS}

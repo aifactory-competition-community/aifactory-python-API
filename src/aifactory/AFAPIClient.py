@@ -1,5 +1,5 @@
-from aifactory_alpha.Authentication import AFAuth, AFCrypto
-from aifactory_alpha.constants import *
+from aifactory.Authentication import AFAuth, AFCrypto
+from aifactory.constants import *
 from datetime import datetime
 import logging
 import os
@@ -8,31 +8,29 @@ import http
 import json
 
 
-class AFContest:
+class AFAPIClient
+
+
+class AFCompetition:
     _summary_ = None
     logger = None
     auth_method = None
-    user_token = None
-    user_email = None
-    task_id = None
+    auth_manager = None
     model_name_prefix = None
     encrypt_mode = None
-    def __init__(self, auth_method=AUTH_METHOD.USERINFO, user_token=None,
-                 user_email=None, model_name_prefix=None, task_id=None,
-                 log_dir="./log/", debug=False, encrypt_mode=True,
+    def __init__(self, auth_method=AUTH_METHOD.KEY, submit_key_path=None, submit_key=None,
+                 user_email=None, task_id=None, debug=False, encrypt_mode=True,
+                 model_name_prefix=None, log_dir="./log/",
                  submit_url=SUBMISSION_DEFAULT_URL, auth_url=AUTH_DEFAULT_URL):
-        self.auth_method = auth_method
-        self.refresh_token = user_token
-        self.user_email = user_email
-        self.model_name_prefix = model_name_prefix
-        self.task_id = task_id
         self.set_log_dir(log_dir)
+        self.model_name_prefix = model_name_prefix
         self.debug = debug
         self.encrypt_mode = int(encrypt_mode)
         self.submit_url = submit_url
-        self.auth_url = auth_url
-        self.auth_manager = AFAuth(user_email, task_id, self.logger, token=user_token, password=None,
-                                   auth_method=auth_method, encrypt_mode=encrypt_mode, auth_url=auth_url, debug=debug)
+        self.auth_manager = AFAuth(self.logger, auth_method=auth_method,
+                                   submit_key_path=submit_key_path, submit_key=submit_key,
+                                   user_email=user_email, task_id=task_id, auth_url=auth_url,
+                                   encrypt_mode=encrypt_mode, debug=debug)
 
     def set_log_dir(self, log_dir: str):
         self.log_dir = os.path.abspath(log_dir)
@@ -48,11 +46,9 @@ class AFContest:
         self.logger.addHandler(stream_handler)
 
     def set_user_email(self, email: str):
-        self.user_email = email
         self.auth_manager.set_user_email(email)
 
     def set_task_id(self, task_id: int):
-        self.task_id = task_id
         self.auth_manager.set_task_id(task_id)
 
     def set_model_name_prefix(self, model_name_prefix: str):
@@ -79,30 +75,41 @@ class AFContest:
             return False
         return True
 
-    def _send_file_(self, auth_token, file_path, submit_url=SUBMISSION_DEFAULT_URL, num_trial=0):
+    def _send_file_(self, file_path, submit_url=SUBMISSION_DEFAULT_URL, num_trial=0):
         file_type = '.'.join(file_path.split('.')[-2:])
         if file_type != 'tar.gz':
             file_type = file_type.split('.')[-1]
-        headers = {'token': auth_token,
-                   'file-type': file_type}
+        headers = {SUBMIT_HEADER_KEYS.FILE_TYPE: file_type, SUBMIT_HEADER_KEYS.MODEL_PREFIX: self.model_name_prefix}
+        headers = self.auth_manager.pack_submit_key(headers)
+        headers[AUTH_REQUEST_KEYS.KEY_ENCRYPTED_STATUS] = b'True'
         response = None
         with open(file_path, 'rb') as f:
-            response = requests.post(submit_url+'/submit', files={'file': f}, headers=headers)
+            response = requests.post(submit_url+SUBMIT_ENDPOINT,
+                                     files={SUBMIT_FILES_KEYS.FILE: f}, headers=headers)
         if self.debug:
-            self.logger.info('Response from auth server: {}'.format(response.text))
-        if response.text == SUBMIT_RESPONSE.TOKEN_NOT_VALID:
-            self.logger.info("Token not valid. Starting authentication again.")
-            auth_token = self.auth_manager.get_token(refresh=True)
-            return self._send_file_(auth_token, file_path, submit_url, num_trial+1)
+            self.logger.info('Response from submission server: {}'.format(response.text))
+        if response.text == SUBMIT_RESPONSE.KEY_NOT_VALID:
+            self.logger.info("Key not valid. Starting authentication again.")
+            submit_key = self.auth_manager.get_submit_key(num_trial=num_trial+1, refresh=True)
+            return self._send_file_(submit_key, file_path, submit_url, num_trial + 1)
         elif response.text == SUBMIT_RESPONSE.FILE_TYPE_NOT_VALID:
             self.logger.info("This type of file is not acceptable for now.")
             self.logger.info("Please check which type of file you have to use for this task.")
             return False
         elif response.status_code == http.HTTPStatus.OK:
-            response_params = json.loads(response.text)
+            try:
+                response_params = json.loads(response.text)
+            except:
+                self.logger.info("Submission failed.")
+                self.logger.info("="*10+"response from the submission server"+"="*10)
+                self.logger.info(response)
+                self.logger.info(response.text)
+                self.logger.info("="*10+"response from the submission server"+"="*10)
+                return False
             self.logger.info("Submission completed. Please check the leader-board for scoring result.")
-            self.logger.info("You have been submitted for {} times.".format(response_params['submit_number']))
-            self.logger.info("The model name was recorded as {}.".format(response_params['model_name']))
+            self.logger.info("You have submitted for {} times.".format(response_params[SUBMIT_RESPONSE_KEYS.NUM_CURRENT_SUBMISSION]))
+            self.logger.info("The model name was recorded as {}.".format(response_params[SUBMIT_RESPONSE_KEYS.MODEL_NAME]))
+            self.logger.info("Other messages from the submission server: {}.".format(response_params[SUBMIT_RESPONSE_KEYS.SYSTEM_MESSAGE]))
         else:
             self.logger.info("Submission failed.")
             self.logger.info("="*10+"response from the submission server"+"="*10)
@@ -125,10 +132,10 @@ class AFContest:
         status = SUBMIT_RESULT.FAIL_TO_SUBMIT
         if not self._is_file_valid_(file_path):
             return _fail_(self, status)
-        auth_token = self.auth_manager.get_token(refresh=True)
-        if auth_token is False:
+        submit_key = self.auth_manager.get_submit_key()
+        if submit_key is False:
             return _fail_(self, status)
-        response = self._send_file_(auth_token, file_path)
+        response = self._send_file_(file_path)
         if response is False:
             return _fail_(self, status)
         status = SUBMIT_RESULT.SUBMIT_SUCCESS
@@ -144,33 +151,4 @@ class AFContest:
         if self.model_name_prefix is not None:
             _summary_ += "Model Name Prefix: {}\n".format(self.model_name_prefix)
         return _summary_
-
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--user_email', '-u', help='Example) myid@myemail.domain.com', dest='user_email')
-    parser.add_argument('--task_id', '-t', help='Example) 3000', dest='task_id')
-    parser.add_argument('--file', '-f', nargs='+', help='Example) answer.csv', dest='file')
-    parser.add_argument('--debug', '-d', type=bool, help='Example) False', default=False, dest='debug')
-    parser.add_argument('--submit_url', help='Example) http://submit.aifactory.solutions',
-                        default=SUBMISSION_DEFAULT_URL, dest='submit_url')
-    parser.add_argument('--auth_url', help='Example) http://auth.aifactory.solutions',
-                        default=AUTH_DEFAULT_URL, dest='auth_url')
-    parser.add_argument('--log_dir', help='Example) http://auth.aifactory.solutions',
-                        default="./log", dest='log_dir')
-    args = parser.parse_args()
-    if args.debug:
-        user_email = 'user0@aifactory.space' if args.user_email is None else args.user_email
-        task_id = '3000' if args.task_id is None else args.task_id
-        files = ['./sample_data/sample_answer.csv'] if args.file is None else args.file
-        c = AFContest(user_email=user_email, task_id=task_id, debug=args.debug,
-                      submit_url=args.submit_url, auth_url=args.auth_url, log_dir=args.log_dir)
-        c.summary()
-        c.submit(files[0])
-    else:
-        c = AFContest(user_email=args.user_email, task_id=args.task_id, debug=args.debug,
-                      submit_url=args.submit_url, auth_url=args.auth_url, log_dir=args.log_dir)
-        c.summary()
-        c.submit(args.file[0])
 

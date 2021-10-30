@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
 
+
 setup(  name='aifactory_alpha',
 
-        version='0.2.2',
+        version='1.0.1',
 
         description='alpha version of AI Factory client api package',
 
@@ -14,7 +15,7 @@ setup(  name='aifactory_alpha',
 
         license='MIT',
 
-        py_modules=['API', 'FileUtilities', 'Authentification', 'constants', 'greetings'],
+        py_modules=['API', 'FileUtilities', 'Authentification', 'constants', 'greetings', 'submit'],
 
         python_requires='>=3.0',
 
@@ -24,7 +25,7 @@ setup(  name='aifactory_alpha',
 
         packages=find_packages('src'),
 
-        scripts=['bin/aifactory-submit'],
+        scripts=['bin/aifactory-submit', 'bin/aifactory-leader-board'],
 
         include_package_data=True,
 

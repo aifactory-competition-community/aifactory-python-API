@@ -1,4 +1,4 @@
-from aifactory_alpha.constants import *
+from aifactory.constants import *
 from Cryptodome import Random
 from Cryptodome.Cipher import AES
 from random import random
@@ -11,30 +11,46 @@ import time
 BLOCK_SIZE=16
 
 class AFAuth():
-    refresh_token = None
-    auth_token = None
-    def __init__(self, user_email, task_id, logger, token=None,
+    submit_key = None
+    task_id = None
+    user_id = None
+    def __init__(self, logger, user_email=None, task_id=None,
+                 submit_key=None, submit_key_path=None,
                  password=None, auth_method=AUTH_METHOD.USERINFO, encrypt_mode=True,
                  auth_url=AUTH_DEFAULT_URL, debug=False):
-        self.user_email = user_email
-        self.task_id = task_id
         self.logger = logger
-        self.refresh_token = token
         self.auth_method = auth_method
         self.encrypt_mode = int(encrypt_mode)
         self.auth_url = auth_url
         self.debug = debug
-        if auth_method==AUTH_METHOD.TOKEN:
-            if debug:
-                token = DEBUGGING_PARAMETERS.TOKEN
-            self.set_token(token)
-            raise(AuthMethodNotAvailableError)
-        elif auth_method==AUTH_METHOD.USERINFO:
-            pass
-        else:
-            raise(WrongAuthMethodError)
+        self.set_auth_method(auth_method, debug=debug, submit_key_path=submit_key_path, submit_key=submit_key,
+                             user_email=user_email, task_id=task_id)
         if encrypt_mode:
             self.crypt = AFCrypto()
+
+    def set_auth_method(self, auth_method, debug=False,
+                        submit_key_path=None, submit_key=None,  # auth method is key
+                        user_email=None, task_id=None):  # auth method is user-info
+        self.auth_method = auth_method
+        if self.auth_method == AUTH_METHOD.KEY:
+            if debug:
+                submit_key = DEBUGGING_PARAMETERS.KEY
+            self.set_submit_key(submit_key_path, submit_key)
+        elif auth_method==AUTH_METHOD.USERINFO:
+            raise(AuthMethodNotAvailableError)
+            self.set_user_email(user_email)
+            self.set_task_id(task_id)
+        else:
+            raise(WrongAuthMethodError)
+
+    def set_submit_key(self, key_path=None, key=None):
+        if key_path is None and key is None:
+            raise (KeyNotGivenError)
+        elif key_path is not None:
+            with open(key_path) as f:
+                self.submit_key = f.read()
+        elif key is not None:
+            self.submit_key = key
 
     def set_user_email(self, email: str):
         self.user_email = email
@@ -42,25 +58,11 @@ class AFAuth():
     def set_task_id(self, task_id: int):
         self.task_id = task_id
 
-    def set_token(self, token=None, yes=False):
-        token_in_env_var = os.getenv('AF_REFRESH_TOKEN')
-        if token_in_env_var is not None:
-            if token is not None and (token_in_env_var != token):
-                if not yes:
-                    print("It will replace your token in the environment variable `AF_REFRESH_TOKEN`.")
-                    res = input("Do you want to proceed? [Y/N] - default: Y")
-                    if res == 'N':
-                        print("Using token from the environment variable `AF_REFRESH_TOKEN`.")
-                        token = token_in_env_var
-                else:
-                    token = token_in_env_var
-        self.user_token = user_token
-
     def _investigate_validation_(self):
         res = []
-        if self.auth_method == AUTH_METHOD.TOKEN:
-            if self.refresh_token is None:
-                res.append(RefreshTokenNotFoundError)
+        if self.auth_method == AUTH_METHOD.KEY:
+            if self.submit_key is None:
+                res.append(KeyNotGivenError)
         elif self.auth_method == AUTH_METHOD.USERINFO:
             if self.user_email is None:
                 res.append(UserInfoNotDefinedError)
@@ -71,6 +73,18 @@ class AFAuth():
         for r in res:
             self.logger.error(r.ment)
         return res
+
+    def _require_submit_key_(self):
+        self.logger.info("Please enter your submit key.")
+        self.logger.info("The key can be found from our website: http://aifactory.space")
+        self.logger.info("제출용 키를 입력해주세요.")
+        self.logger.info("제출용 키는 저희 홈페이지의 참가중이신 태스크 페이지에서 내려받으실 수 있습니다: http://aifactory.space")
+        submit_key = None
+        if self.debug:
+            submit_key = DEBUGGING_PARAMETERS.KEY
+        else:
+            submit_key = input("Submit Key: ")
+        return submit_key
 
     def _require_password_(self):
         password = None
@@ -83,47 +97,69 @@ class AFAuth():
             password = self.crypt.encrypt_hash(password)
         return password
 
-    def _is_token_valid_(self):
-        return False
-
     def pack_user_info(self, params: dict):
         hashed_password = self._require_password_()
         if self.encrypt_mode:
             hashed_password = self.crypt.encrypt_aes(hashed_password, self.user_email)
-        params['password'] = hashed_password
-        params['password_encrypted'] = self.encrypt_mode
+        params[AUTH_REQUEST_KEYS.PASSWORD] = hashed_password
+        params[AUTH_REQUEST_KEYS.PASSWORD_ENCRYPTED_STATUS] = self.encrypt_mode
         return params
 
-    def pack_refresh_token(self, params: dict):
+    def pack_submit_key(self, params: dict):
+        submit_key = None
         if self.encrypt_mode:
-            refresh_token = self.crypt.encrypt_aes(self.refresh_token, self.user_email)
-        params['refresh_token'] = refresh_token
-        params['refresh_token_encrypted'] = self.encrypt_mode
+            submit_key = self.crypt.encrypt_aes(self.submit_key, AIFACTORY_VERSION)
+        params[AUTH_REQUEST_KEYS.SUBMIT_KEY] = submit_key
+        params[AUTH_REQUEST_KEYS.KEY_ENCRYPTED_STATUS] = 'True' # this should be changed.
         return params
 
-    def get_token(self, num_trial=0, refresh=False):
-        if refresh: self.auth_token = None
-        if self.auth_token is not None: return self.auth_token
+    def _check_submit_key_validity_(self):
+        params = {AUTH_REQUEST_KEYS.AUTH_METHOD: self.auth_method,
+                  AUTH_REQUEST_KEYS.VERSION: AIFACTORY_VERSION}
+        params = self.pack_submit_key(params)
+        response = requests.get(self.auth_url + AUTH_ENDPOINT, params=params)
+        self.logger.info('Response from auth server: {}'.format(response.text))
+        if response.text == AUTH_RESPONSE.KEY_VALID:
+            self.logger.info('Submit key validity checked.')
+            return True
+        elif response.status_code == http.HTTPStatus.OK:
+            self.logger.warn("Authentication failed. Please check if your submit key is valid.")
+            self.logger.info("제출 키가 유효하지 않습니다. 다시 한 번 확인해주세요.")
+            return False
+        else:
+            self.logger.warn("Authentication procedure not available.")
+            self.logger.warn("Skip the submit key validity check.")
+        return True
+
+    def get_submit_key(self, num_trial=0, refresh=False):
+        if num_trial >= MAXIMUM_SUBMISSION_TRIAL:
+            return False
+        if refresh: self.submit_key = None
+        if self.auth_method == AUTH_METHOD.KEY:
+            if self.submit_key is None:
+                self.submit_key = self._require_submit_key_()
+                return self.get_submit_key(num_trial+1)
+            else:
+                if self._check_submit_key_validity_():
+                    return self.submit_key
+                else:
+                    return self.get_submit_key(num_trial+1, refresh=True)
 
         res = self._investigate_validation_()
         if len(res) != 0:
             return False
 
-        params = {'auth_method': self.auth_method, 'version': VERSION,
-                  'task_id': self.task_id, 'user_email': self.user_email}
-        if self.auth_method == AUTH_METHOD.USERINFO or self.refresh_token is None:
+        params = {AUTH_REQUEST_KEYS.AUTH_METHOD: self.auth_method, AUTH_REQUEST_KEYS.VERSION: AIFACTORY_VERSION,
+                  AUTH_REQUEST_KEYS.TASK_ID: self.task_id, AUTH_REQUEST_KEYS.USER_ID: self.user_id}
+        if self.auth_method == AUTH_METHOD.USERINFO or self.submit_key is None:
             params = self.pack_user_info(params)
-        elif self.auth_method == AUTH_METHOD.TOKEN and self.refresh_token is not None:
-            params = self.pack_refresh_token(params)
 
-        response = requests.get(self.auth_url+'/submit_token', params=params)
+        response = requests.get(self.auth_url+AUTH_ENDPOINT, params=params)
         self.logger.info('Response from auth server: {}'.format(response.text))
 
-        if response.text in [AUTH_RESPONSE.TOKEN_EXPIRED, AUTH_RESPONSE.TOKEN_NOT_VALID]:
-            self.refresh_token = None
-            self.auth_method = AUTH_METHOD.USERINFO
-            self.logger.info("Refresh token not valid. We need your password to issue a new one.")
-            return self.get_token(num_trial)
+        if response.text == AUTH_RESPONSE.KEY_NOT_VALID:
+            self.logger.error(KeyNotValidError.ment)
+            raise(KeyNotValidError)
         elif response.text == AUTH_RESPONSE.USER_NOT_PARTICIPATING:  # if the user hasn't registered in the task.
             self.logger.error(UserNotRegisteredError.ment)
             raise(UserNotRegisteredError)
@@ -141,26 +177,26 @@ class AFAuth():
             self.logger.info(self.summary())
             self.logger.info('Please check you have the right password and email that you use to log-in the AI Factory Website.')
             time.sleep(1)
-            return self.get_token(num_trial + 1)
+            return self.get_submit_key(num_trial + 1)
         elif response.text == AUTH_RESPONSE.VERSION_NOT_VALID:
             self.logger.info("Authentication failed. \nPlease check if you have the right version.")
             self.logger.info("Try installing the updated version of aifactory-alpha.")
         elif response.status_code == http.HTTPStatus.OK:
-            tokens = json.loads(response.text)
-            self.auth_token = self.crypt.decrypt_aes(tokens['token'], self.user_email)
+            submit_key_response = json.loads(response.text)
+            self.submit_key = self.crypt.decrypt_aes(submit_key_response[AUTH_REQUEST_KEYS.SUBMIT_KEY], AIFACTORY_VERSION)
             if self.auth_method == AUTH_METHOD.USERINFO:
-                self.refresh_token = self.crypt.decrypt_aes(tokens['refresh_token'], self.user_email)
-                self.auth_method = AUTH_METHOD.TOKEN
+                self.submit_key = self.crypt.decrypt_aes(submit_key_response[AUTH_REQUEST_KEYS.SUBMIT_KEY], AIFACTORY_VERSION)
+                self.auth_method = AUTH_METHOD.KEY
             self.logger.info('Authentication successful.')
-            return self.auth_token
+            return self.submit_key
         return False
 
     def summary(self):
         _summary_ = ">>> User Authentication Info <<<\n"
         _summary_ += "Authentication Method:"
-        if self.auth_method is AUTH_METHOD.TOKEN:
-            _summary_ += "Token \n"
-            _summary_ += "    Token: {} \n".format(self.refresh_token)
+        if self.auth_method is AUTH_METHOD.KEY:
+            _summary_ += "Submit Key \n"
+            _summary_ += "    Submit Key: {} \n".format(self.submit_key)
         elif self.auth_method is AUTH_METHOD.USERINFO:
             _summary_ += "User Information \n"
             _summary_ += "    Task ID: {}\n".format(self.task_id)
