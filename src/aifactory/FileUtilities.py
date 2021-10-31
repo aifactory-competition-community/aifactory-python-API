@@ -6,13 +6,13 @@ ARCHIVE_DIR = '/efs/ARCHIVES/'
 MAX_SUB_SAVE = 1
 EXPECTED_MAXIMUM_SUBMISSION_DIGITS = 4
 
-TASK_DIR_PREFIX = 'task_id'
-LAP_DIR_PREFIX = 'lap'
-USER_DIR_PREFIX = 'user_id'
-SUBMISSION_DIR_PREFIX = 'sub'
+TASK_DIR_PREFIX = 'TASK_ID'
+LAP_DIR_PREFIX = 'LAP'
+USER_DIR_PREFIX = 'USER_ID'
+SUBMISSION_DIR_PREFIX = 'SUB'
 
-SCRIPT_DIR_PREFIX = 'script'
-GTANSWER_DIR_PREFIX = 'gtanswer'
+SCRIPT_DIR_PREFIX = 'SCRIPT'
+GTANSWER_DIR_PREFIX = 'GTANSWER'
 
 
 def get_task_directory(task_id, root_dir=ROOT_DIR):
@@ -75,7 +75,7 @@ def get_latest_directory(task_id, lap_num, user_id):
     """
     user_dir = get_user_directory(task_id, lap_num, user_id)
     past_submissions = os.listdir(user_dir)
-    past_submissions = [(sub, int(sub.split(SUBMISSION_DIR_PREFIX)[-1])) \
+    past_submissions = [(sub, int(sub[-EXPECTED_MAXIMUM_SUBMISSION_DIGITS:])) \
                         for sub in past_submissions if sub.startswith(SUBMISSION_DIR_PREFIX)]
     if len(past_submissions) == 0:
         return None
@@ -90,7 +90,7 @@ def get_new_directory(task_id, lap_num, user_id, cur_num_submission=None):
     # should be simplified later.
     user_dir = get_user_directory(task_id, lap_num, user_id)
     past_submissions = os.listdir(user_dir)
-    past_submissions = [(sub, int(sub.split(SUBMISSION_DIR_PREFIX)[-1])) \
+    past_submissions = [(sub, int(sub[-EXPECTED_MAXIMUM_SUBMISSION_DIGITS:])) \
                         for sub in past_submissions if sub.startswith(SUBMISSION_DIR_PREFIX)]
     if len(past_submissions) == 0 and (cur_num_submission is None):
         cur_num_submission = 1

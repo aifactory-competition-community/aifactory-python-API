@@ -2,6 +2,7 @@ import os
 import psycopg2
 from aifactory.Authentication import AFCrypto
 
+
 class AFQuery:
     crypt = None
     db = None
@@ -48,14 +49,13 @@ import logging
 
 
 class Topics:
-    AFCONTEST_SUBMIT_PREFIX = 'afcontest.submit'
-    AFCONTEST_DEFAULT_SUBMIT = 'afcontest.submit.default'
+    AFCONTEST_SUBMIT_PREFIX = 'afcompetition.submit'
+    AFCONTEST_DEFAULT_SUBMIT = 'afcompetition.submit.default'
 
 
 class AFPublisher:
     producer = None
-
-    def __init__(self, bootstrap_servers='kafka.aifactory.solutions:9092',
+    def __init__(self, bootstrap_servers=os.environ['KAFKA_BROKER_ADDRESS'],
                  value_serializer=lambda x: dumps(x).encode('utf-8'), acks=1, debug=False):
         if debug:
             logging.basicConfig(level=logging.INFO)
@@ -72,4 +72,8 @@ class AFPublisher:
 
     def terminate(self):
         self.producer.close()
+
+
+if __name__ == "__main__":
+    a = AFPublisher('kafka.aifactory.solutions:9092')
 
