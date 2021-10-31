@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(  name='aifactory_alpha',
 
-        version='1.2.4',
+        version='1.2.5',
 
         description='alpha version of AI Factory client api package',
 

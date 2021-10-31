@@ -1,5 +1,5 @@
 AIFACTORY_VERSION = '1.2.4'
-SUBMISSION_DEFAULT_URL = 'http://submit.aifactory.solutions'
+SUBMISSION_DEFAULT_URL = 'http://submit-alpha.aifactory.solutions'
 SUBMIT_ENDPOINT = '/submit'
 LEADERBOARD_ENDPOINT = '/leader_board'
 SCORE_ENDPOINT = '/score'
