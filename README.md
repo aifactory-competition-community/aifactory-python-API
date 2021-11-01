@@ -1,32 +1,34 @@
 # aifactory-alpha
 
-Alpha version of `aifactory` module
+`alpha` version of `aifactory` python package
 
-## Install via `pip`
+
+## How-to-use
+
+패키지 사용법 -> [Tutorial Page](https://github.com/aifactory-competition-community/aifactory-beta-tutorial)
+
+## 패키지 개발 가이드
+
+- `main` Branch:
+  - 알파 버전을 개발하는 메인 브랜치 입니다.
+
+
+- `beta` Branch: 
+  - 베타 버전을 개발하는 브랜치 입니다. (베타서비스 배포버전)
+  - 베타 브랜치에는 코드를 바로 업데이트 해서 푸시하지 않고 메인 브랜치에서 머지한 후 푸시합니다.
 
 ```
-pip install aifactory-alpha==0.2.2
+git checkout beta
+git merge main
+git commit
+git push
+git checkout main
 ```
 
-## Submit your answer for the task with the command `aifactory-submit`.
-
-```
-aifactory-submit --user_email user0@aifactory.page # password is qlqjs1 for the test user `user0`
-                 --task_id 4000 # task id can be found on the url to the task
-                 --file answer.zip # path to the file you want to submit
-                 # --auth_url auth.aifactory.solutions
-                 # --submit_url submit.aifactory.solutions
-                 # --log_dir ./log
-                 
-aifactory-submit --file ./sample_data/sample_answer.csv 
-                 --debug True # debug mode has default dummy user information
-                              # You can still change argument on debug mode to make an error
-```
 
 ## To-do
- - [ ] 언노운 에러 -> 패키지 업데이트하라고 알려주기
- - [ ] 윈도우에서도 되는지 확인해보기
  - [ ] 다른 플랫폼에서도 constants 공유할 수 있게 하기
+ - [ ] 
 
 
 ### ASCII Arts Reference
