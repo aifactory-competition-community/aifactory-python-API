@@ -1,6 +1,6 @@
-# aifactory-alpha
+# aifactory-beta
 
-`alpha` version of `aifactory` python package
+`beta` version of `aifactory` python package
 
 
 ## How-to-use
